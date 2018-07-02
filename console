@@ -1,0 +1,33 @@
+#!/usr/bin/env php
+<?php
+namespace App;
+
+require __DIR__.'/vendor/autoload.php';
+
+use App\Commands\TunnelStartCommand;
+use App\Commands\TunnelStopCommand;
+use Aws\Ec2\Ec2Client;
+use Symfony\Component\Console\Application;
+use Symfony\Component\Dotenv\Dotenv;
+
+$app = new Application();
+
+$dotenv = new Dotenv();
+$dotenv->load(__DIR__.'/.env');
+
+$validator = new DotenvValidator($dotenv);
+try {
+    $validator->require(['TUNNEL_NAME', 'TUNNEL_PORT', 'TUNNEL_REGION', 'SSH_KEY']);
+} catch (\Exception $e) {
+    exit($e->getMessage() . PHP_EOL);
+}
+
+$ec2Client = new Ec2Client([
+    'version' => 'latest',
+    'region' => getenv('TUNNEL_REGION'),
+]);
+
+$app->add(new TunnelStartCommand($ec2Client));
+$app->add(new TunnelStopCommand($ec2Client));
+
+$app->run();
